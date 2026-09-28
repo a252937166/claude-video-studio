@@ -23,7 +23,9 @@ The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each ste
 4. **Close-ups need a close-up-safe performance.** Use an upright stance, chest-level gestures and a clear face; save big dance moves for wide shots.
 5. **Lip-sync on AI rap is hard.**
    - JoyVASA, MuseTalk 1.5 and LatentSync 1.5/1.6 all scored SyncNet about 1.6–1.8 (a static mouth: 0.9) on a reverb-heavy, doubled, AI-generated rap at 5.6 syllables/s.
-   - Stylised characters: drive a jaw bone from the vocal envelope and syllable onsets instead.
+   - **Semi-realistic 3D characters: MuseTalk works well as a post-pass on the rendered plates.** On a semi-real Naruto model it gave natural lips.
+   - A jaw bone alone exposed the model's pointed teeth, which looked like fangs.
+   - Fully stylised or flat 2D characters: swap viseme drawings per syllable, with the timing taken from the vocal envelope peaks.
 6. **Budget honestly.**
    - EEVEE runs about 3–20 s per frame (the Bistro city is the slowest), so a 600-frame clip is about 1.5 h plus shader compile.
    - Each lip-sync model is 4–10 GB on disk. Ask before downloading, and delete what you don't use.

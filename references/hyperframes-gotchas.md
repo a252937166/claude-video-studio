@@ -37,3 +37,10 @@ These were learned the hard way on real renders. Paste them into the `WORKER-NOT
 15. Swap GSAP from the CDN to a local `assets/gsap.min.js` after assembly, so offline renders work.
 16. Run `check --no-contrast`, then `snapshot --at t1,t2,… --no-end --describe false -o dir`, then `render --quality looks --fps 30`.
 17. **The final QA is on the MP4 itself.** Extract frames one by one with `ffmpeg -ss`, and never trust the preview alone.
+18. **External `<script src>` files run before the composition DOM exists.**
+    - Put only function definitions in external files.
+    - Call them from an inline `<script>` at the end of `<body>`, which is where the elements get built and the timeline gets registered.
+19. **Video layers need dense keyframes.**
+    - A `<video>` with sparse keyframes (e.g. a 2.5 s GOP) makes HyperFrames' seeks freeze frames. `check` warns "sparse keyframes".
+    - Re-encode first: `ffmpeg -i in.mp4 -c:v libx264 -r 30 -g 15 -keyint_min 15 out.mp4`.
+    - Then prove there are no freezes by scanning consecutive-frame differences in the rendered MP4.
