@@ -20,7 +20,7 @@ It comes out of one week of real projects: five pixel-art MVs and PSAs, flat-cut
 npx skills add heygen-com/hyperframes -s '*' -a claude-code -y
 
 # 2) this skill
-git clone https://github.com/<you>/claude-video-studio ~/.claude/skills/claude-video-studio
+git clone https://github.com/a252937166/claude-video-studio ~/.claude/skills/claude-video-studio
 ```
 
 Then ask Claude Code something like:
