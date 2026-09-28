@@ -30,3 +30,7 @@ The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each ste
    - EEVEE runs about 3–20 s per frame (the Bistro city is the slowest), so a 600-frame clip is about 1.5 h plus shader compile.
    - Each lip-sync model is 4–10 GB on disk. Ask before downloading, and delete what you don't use.
 7. **Credits.** CC-BY needs attribution in the description. AIST++ motion is CC-BY, but its source database is research-only, so check before monetising.
+8. **Tune MuseTalk on stylised or 3D faces.**
+   - **Track the face across frames.** A face detector happily scores a fist or an open palm as a face; taking detection[0] loses the real face on every gesture frame. Try detections nearest the last face first, then the last face region, then the rest.
+   - **Thin, closed stylised lips parse as only 40–50 % 'lip' class,** so a realistic-face occlusion threshold fades MuseTalk out on unoccluded frames. Lower it: start the fade at about 8 %, full weight at about 30 %.
+   - **Always read the pass's coverage per close shot** (frames at full weight / partial / off) before rendering the overlay. "Full weight on 12 of 600" is a failed pass even when the file renders fine.
