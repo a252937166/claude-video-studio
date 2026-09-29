@@ -16,6 +16,18 @@ The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each ste
    - Sketchfab: filter for downloadable, CC0/CC-BY; avoid game rips;
    - MetaHuman or Character Creator;
    - a photo-to-3D service, for a specific person who has consented.
+   - **Why Claude doesn't build the model itself.** Measured in Blender on the same character:
+     - **The downloaded community model** (Naruto by Monhoo, CC BY):
+       - 82,107 faces (164k triangles): hair 23,146, head 13,156, teeth 11,999, shoes 8,520, hands 5,604;
+       - 65 bones, 40 of them finger bones;
+       - 32 texture maps at 4096² (309 MB).
+     - **The version Claude built with code (v4):**
+       - 29,411 faces, 6,875 of them from a stock game body;
+       - 73,600 rule-grown hair strands, and 6-face boxes for the pouches;
+       - 2048² stock textures, with a projected face photo.
+     - Its jacket (14,336 faces) out-counted the community jacket, so face count isn't the point.
+     - The point is sculpted form and edge-flow, which an artist judges by eye: sculpt → retopology → UV → texture painting → rig → weights.
+     - Code can place boxes, tubes, strands and cloth. It can't sculpt a character's hair and face. The user's verdict on v4: "a bit like him? Not at all."
 2. **Real scenes are easy; real people are hard.**
    - Photogrammetry scans (Sketchfab CC-BY), Poly Haven (CC0) and NVIDIA ORCA Bistro (CC-BY) look real in Blender EEVEE.
    - Scans carry baked light: use them as mostly emissive, light the hero separately, and keep cameras inside the scanned area.
