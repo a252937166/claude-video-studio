@@ -1,5 +1,8 @@
 # 2D character animation: lessons from one 20 s chorus
 
+> **Verdict after user review (2026-09-29).** Rig v3 passed every per-frame check below, and the user still rejected it: 「关节部位都是跟木偶人一样…一甩一甩的」 ("the joints look like a puppet's, the arms fling around").
+> A rig of one front view can't turn, clench a fist or fold cloth. For dance and acting, use AI motion transfer (`2d-motion-transfer.md`). Keep the rig for small idle or talking loops.
+
 ## What works
 **Animate an existing illustration.** Don't draw the character in code. Mesh-deform a good front-view illustration Live2D/Spine-style:
 - a cut-out with a soft alpha edge;

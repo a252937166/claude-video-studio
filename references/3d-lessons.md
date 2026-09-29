@@ -1,4 +1,4 @@
-# 3D lessons: one 20-second chorus, six versions
+# 3D lessons: one 20-second chorus, seven versions
 
 The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each step taught:
 
@@ -41,3 +41,23 @@ The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each ste
    - Fix limits by bending the elbow, not by swinging the arm. For fast dance, use 3 motion-blur steps.
 10. **Track faces backward in time.** A full-frame face detector finds a face that grows into view (a push-in) only once it is large. After the forward pass, walk back from each first detection using its face region, so lip-sync covers the whole push-in.
 11. **Partial re-renders need the raw plates.** Keep the raw plates as an MP4. When only some shots change, check that cameras and joints in the other shots are bit-identical, re-render just the changed shots, and splice them in.
+12. **Check bone rotation continuity, not just positions.**
+    - In one frame, a forearm rolled 158°. Its twist share had been computed with `atan2`, which wrapped through ±180°.
+    - The hand and elbow stayed in place, so the joint-speed and bone-direction scans both missed it.
+    - Scan every bone's full world rotation per frame; keep it at or below about 35° per frame outside cuts. Pin each gesture's twist branch.
+13. **Rate-limit fast mocap whips.**
+    - Krump and waacking arm whips reached 56–92° per frame.
+    - Remove the twist jitter, then redistribute time inside each half-beat, so beats stay put, until every bone is at or below 30° per frame.
+14. **Keep the dancer's hops.**
+    - A ground pass that pins both feet flattens real hops. Snap only planted feet.
+    - Let hops leave the floor and land at z = 0.
+    - Compare post-landing ankle travel with the source (within about 10 %) to tell choreography from retarget slide.
+15. **Lip-sync occlusion guards can be wrong.**
+    - MediaPipe Pose placed a hand behind the head in front of the face, and switched MuseTalk off for 13 frames per shot.
+    - Use renderer truth instead: project the hand and sleeve geometry through each frame's camera, and keep the guard only where an arm really covers the lower face (a frames list passed to the lip pass).
+16. **"Export bit-identical" is not enough for partial re-renders.**
+    - A build-code change (the hop fix) also changed shots whose export was identical.
+    - Before reusing old plates, diff the *built* pose in world space against the backed-up scene.
+17. **Run one GPU job at a time on a 24 GB Mac.**
+    - A Bistro render (7.6 GB) plus MuseTalk pushed swap to 31.6/32 GB, and MuseTalk slowed about 3×.
+    - Pause the render with `kill -STOP` and resume it with `kill -CONT` while a priority job runs.

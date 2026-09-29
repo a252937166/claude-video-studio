@@ -25,3 +25,14 @@ Run `scripts/qa_video.sh out.mp4`, then look at the contact sheet yourself.
 - [ ] No photoreal double of a real person without their consent. No red-cross emblem (it is protected). No third-party brand logos.
 - [ ] Credits for CC-BY assets (models, scenes, mocap, music if any) go in the description, including "modified" notes.
 - [ ] Fan-art IP (anime characters, sports stars): OK for fan posts, but flag the risk before any monetised or sponsored use.
+
+## AI-generated footage (Kling / Veo / 即梦)
+- [ ] Keyed with a colour-difference matte (`scripts/key_diff.py`), not chromakey. Over magenta, dark clothing is solid and there is no green fringe.
+- [ ] The watermark corner is blanked (`--corner`), or a watermark-free download was used.
+- [ ] **Timing against the driver** is measured by silhouette-motion correlation, and the take is shifted if the lag is not 0. Kling came back 2 frames early.
+- [ ] **Mouth against the vocals** is measured with `scripts/lip_sync_check.py`. The peak lag is −1 to −2 frames, and r is noted. For drawn mouths use `--metric area`.
+- [ ] **Faces are compared across clips**: eye colour, face shape, hair colour, line style. Every shot of a character uses the same generator, unless the user accepts the gap.
+- [ ] The render's fps equals the footage fps (24 for Veo). The frozen-frame scan counts only intended holds.
+- [ ] Framing is re-checked on every frame with the real takes. Upscales stay at or below about 1.6× of the source.
+- [ ] The description names the AI tools, alongside the burned-in 「AI 合成」 label.
+

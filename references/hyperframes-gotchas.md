@@ -44,3 +44,13 @@ These were learned the hard way on real renders. Paste them into the `WORKER-NOT
     - A `<video>` with sparse keyframes (e.g. a 2.5 s GOP) makes HyperFrames' seeks freeze frames. `check` warns "sparse keyframes".
     - Re-encode first: `ffmpeg -i in.mp4 -c:v libx264 -r 30 -g 15 -keyint_min 15 out.mp4`.
     - Then prove there are no freezes by scanning consecutive-frame differences in the rendered MP4.
+20. **Render at the footage frame rate.**
+    - A 24 fps video layer in a 30 fps render repeats every 4th frame, which reads as a judder.
+    - When the AI footage is 24 fps, use `render --fps 24`, and seek-check with a frozen-frame scan.
+21. **Clean frames for covers.**
+    - Copy the project, hide the overlay layer (lyrics, stamps, labels) with one CSS rule, and snapshot the copy.
+    - Never edit the real project for this.
+22. **Keyed characters as VP9-alpha WebM layers.** They composite fine between the background and foreground.
+    - Encode with `-c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -g 15`.
+    - When decoding them with ffmpeg, force `-c:v libvpx-vp9` before `-i`: the native decoder drops the alpha plane.
+
