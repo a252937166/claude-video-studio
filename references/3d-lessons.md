@@ -34,3 +34,10 @@ The same 20 s chorus was rebuilt six times over roughly 30+ hours. What each ste
    - **Track the face across frames.** A face detector happily scores a fist or an open palm as a face; taking detection[0] loses the real face on every gesture frame. Try detections nearest the last face first, then the last face region, then the rest.
    - **Thin, closed stylised lips parse as only 40–50 % 'lip' class,** so a realistic-face occlusion threshold fades MuseTalk out on unoccluded frames. Lower it: start the fade at about 8 %, full weight at about 30 %.
    - **Always read the pass's coverage per close shot** (frames at full weight / partial / off) before rendering the overlay. "Full weight on 12 of 600" is a failed pass even when the file renders fine.
+9. **Scan joint speeds before rendering.**
+   - Compute per-frame joint speeds over the whole clip, excluding the cut frames. Anything above about 12 m/s is a pop, not a dance move.
+   - Example: a height cap that swung the whole arm about the shoulder flipped its plane when the arm passed overhead, and the hand jumped 0.8 m in one frame (28 m/s).
+   - EEVEE's 1-step vector motion blur then smears background lights across the limb, which reads as a torn, glowing arm.
+   - Fix limits by bending the elbow, not by swinging the arm. For fast dance, use 3 motion-blur steps.
+10. **Track faces backward in time.** A full-frame face detector finds a face that grows into view (a push-in) only once it is large. After the forward pass, walk back from each first detection using its face region, so lip-sync covers the whole push-in.
+11. **Partial re-renders need the raw plates.** Keep the raw plates as an MP4. When only some shots change, check that cameras and joints in the other shots are bit-identical, re-render just the changed shots, and splice them in.
