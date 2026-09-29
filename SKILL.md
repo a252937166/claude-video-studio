@@ -1,11 +1,12 @@
 ---
 name: claude-video-studio
-description: Make short videos (Douyin/TikTok/Reels/Shorts) with Claude Code as a code-driven animator. Use it when the user wants a music video, lyric MV, pixel-art or flat-cutout animation, a narrated explainer or PSA, or asks which video style Claude does well. It picks a style by what renders reliably (pixel and flat cutout first; 2D rig animation and 3D only with caveats), writes timed lyrics for AI music, builds pixel characters from photos, cuts to the beat with HyperFrames, and QA-checks the MP4 before publishing.
+description: Make short videos (Douyin/TikTok/Reels/Shorts) with Claude Code as a code-driven animator. Use it when the user wants a music video, lyric MV, pixel-art or flat-cutout animation, a narrated explainer or PSA, or asks which video style Claude does well. It picks a style by what renders reliably (pixel and flat cutout first; 2D characters by AI motion transfer on a Claude-rendered driver; 3D only with caveats), writes timed lyrics for AI music, builds pixel characters from photos, cuts to the beat with HyperFrames, and QA-checks the MP4 before publishing.
 ---
 
 # Claude Video Studio
 
 Claude makes video by **writing code that draws every frame**: HTML, CSS and GSAP, rendered to MP4 by [HyperFrames](https://hyperframes.heygen.com). It does not generate pixels the way Sora, Kling or Veo do. Pick styles that code can draw well, and be honest about the rest.
+For 2D character animation, pair the two: Claude renders the motion and does all the post work, and a video model redraws the character every frame (section 5).
 
 ## 0. Prerequisites
 
@@ -31,7 +32,8 @@ Answer with this table before building anything. Don't promise a style that will
 |---|---|---|---|
 | **Pixel art** (characters as sprite sheets, game UI) | ★★★★★ | 2-min MV ≈ 1–2 h | lyric MVs, personal stories, PSAs, game-style narratives |
 | **Flat cutout / motion graphics** (shapes, flat characters, kinetic type) | ★★★★★ | 1-min ≈ 1.5–2 h | famous-moment remakes, product launches, explainers, data |
-| **2D rig animation of an existing illustration** (mesh deformation, like Live2D or Spine) | ★★★★ | 20 s ≈ 1–3 h incl. per-frame QA | character acting, rap and dance clips from ONE front-view illustration; see `references/2d-rig-lessons.md` |
+| **2D character from ONE illustration, AI motion transfer** (Kling 「动作控制」 on a Claude-rendered driver; Veo as a fallback) | ★★★★ | driver ≈ 1 h, generation in the user's app, post ≈ 0.5 h | dance and rap clips that keep the illustration's style; see `references/2d-motion-transfer.md` |
+| **2D rig animation of an existing illustration** (mesh deformation, like Live2D or Spine) | ★★ | 20 s ≈ 1–3 h incl. per-frame QA | small idle or talking loops only: the joints read as a puppet in dance; see `references/2d-rig-lessons.md` |
 | **2D character drawn from scratch in code** | ★★ | varies | TV cut-out puppet level only. **Not** frame-by-frame hand-drawn motion |
 | **3D realistic** (three.js or Blender) | ★ | 20 s ≈ 10–30+ h | only with a **high-quality ready-made model**; scenes can be real (scans, Poly Haven) |
 
@@ -77,7 +79,27 @@ AI music apps (Gemini/Lyria, Suno, …) follow timing much better when you give 
 - **Timing.** Hit the beat grid: every cut, hit and text pop lands on `beats[i] + offset`.
 - **Reference-driven.** When the user sends a reference video, describe its structure beat by beat first, then rebuild it in your own drawing style. Don't copy assets.
 
-## 5. Voice-over and SFX (explainers / PSAs)
+## 5. 2D character animation: AI motion transfer — see `references/2d-motion-transfer.md`
+
+Use this when the user has one illustration and wants it to dance or rap. A mesh rig of one front view reads as a puppet.
+
+1. **Driver video.** Render the choreography with a 3D stand-in (section 8's model and motion): one person, a static camera, 3–30 s.
+   - A full-body take for the dance.
+   - A waist-up take with lyric gestures and a lip-synced mouth (MuseTalk on the driver).
+   - A clean plate: the same camera with the character hidden.
+2. **Frame the illustration to the driver's first frame.** Run `scripts/make_green.py cut.png wide|close …` to place it on #00B140.
+3. **Rehearse the camera plan before any credits are spent.** Key the driver into a stand-in with `scripts/standin_from_driver.py`, then check every frame for clipped hands and visible take edges.
+4. **Hand the user the pack** (images, drivers, prompt, settings).
+   - Kling 「动作控制」, 人物朝向「与视频一致」, gives 20 s in the illustration's own style.
+   - Veo (Gemini app) is the no-Kling fallback: 10 s at 720p/24 fps; it drifts to 3D-toon and the mouth isn't synced.
+5. **Post.**
+   - Key with `scripts/key_diff.py` (a colour-difference matte; `--corner` for the watermark).
+   - Measure the lag against the driver; Kling was 2 frames early.
+   - Check the mouth against the vocals with `scripts/lip_sync_check.py`.
+   - Edit on the beat, and render at the footage fps.
+6. **Keep one generator per character.** Kling cel and Veo 3D-toon side by side read as two different drawings. Compare faces across clips; `scripts/recolor_iris.py` fixes eye-colour drift.
+
+## 6. Voice-over and SFX (explainers / PSAs)
 
 - **Script.** Take the user's script **verbatim**; don't paraphrase medical or legal text.
 - **Voices** (edge-tts):
@@ -90,7 +112,7 @@ AI music apps (Gemini/Lyria, Suno, …) follow timing much better when you give 
 - **Timing.** The picture follows the voice: build `timeline.json` from the real line durations, then animate.
 - **SFX.** Synthesize 8-bit SFX with numpy (blips, steps, heartbeat, rewind) and mix them into one voice track. Offer a no-voice version too, with the music louder and loudnorm at −16 LUFS.
 
-## 6. QA — never trust the preview alone
+## 7. QA — never trust the preview alone
 
 Run the checklist in `references/qa-checklist.md`. The essentials:
 
@@ -100,8 +122,9 @@ Run the checklist in `references/qa-checklist.md`. The essentials:
 - **Cover.** The first frame must be a designed cover, never black. Add 1 s of cover plus 1 s of silence at the start. Embed the cover as `attached_pic`. Export 16:9, 4:3 and 3:4 cover PNGs.
 - **AI label.** Burn in 「AI 合成」 / "AI-generated" for the whole clip. China's labeling rules are in force since 2025-09-01. Tick the platform's AI declaration when posting.
 - Put credits for CC-BY assets (models, scenes, motion data) in the description.
+- **AI footage** (Kling, Veo): run the checks in the checklist's last section: keying, timing against the driver, mouth against the vocals, face consistency across clips, and a render fps equal to the footage fps.
 
-## 7. 3D (only if the user insists) — see `references/3d-lessons.md`
+## 8. 3D (only if the user insists) — see `references/3d-lessons.md`
 
 - Scenes:
   - real scans (Sketchfab CC-BY);
@@ -115,9 +138,10 @@ Run the checklist in `references/qa-checklist.md`. The essentials:
 - Lip-sync on AI-generated, reverb-heavy rap stays weak. JoyVASA, MuseTalk and LatentSync all scored SyncNet ≈ 1.6–1.8 on it (a static mouth scored 0.9). Say so honestly.
 - Budget: disk (models of 4–10 GB each) and hours. **Ask before any multi-GB download.**
 
-## 8. Working style (lessons from real sessions)
+## 9. Working style (lessons from real sessions)
 
 - Show a storyboard or a still first, and render after approval.
 - Give honest limits early. Don't burn hours polishing a dead end: the 3D re-dress was.
 - Keep the user posted with short progress lines during long runs.
 - Delete intermediates and ask before large downloads. Disk fills fast.
+- Paid AI tools are the user's call. Prepare the pack (aligned images, driver videos, step-by-step instructions with the prompt) and let the user generate. Never assume they have an account; offer the route they already have (e.g. the Gemini app), and say what it costs in quality.
