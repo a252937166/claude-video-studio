@@ -31,7 +31,8 @@ Answer with this table before building anything. Don't promise a style that will
 |---|---|---|---|
 | **Pixel art** (characters as sprite sheets, game UI) | ★★★★★ | 2-min MV ≈ 1–2 h | lyric MVs, personal stories, PSAs, game-style narratives |
 | **Flat cutout / motion graphics** (shapes, flat characters, kinetic type) | ★★★★★ | 1-min ≈ 1.5–2 h | famous-moment remakes, product launches, explainers, data |
-| **2D rig animation** (layered parts on bones, like Live2D or Spine) | ★★ | varies | simple character acting, talking heads. **Not** frame-by-frame hand-drawn motion |
+| **2D rig animation of an existing illustration** (mesh deformation, like Live2D or Spine) | ★★★★ | 20 s ≈ 1–3 h incl. per-frame QA | character acting, rap and dance clips from ONE front-view illustration; see `references/2d-rig-lessons.md` |
+| **2D character drawn from scratch in code** | ★★ | varies | TV cut-out puppet level only. **Not** frame-by-frame hand-drawn motion |
 | **3D realistic** (three.js or Blender) | ★ | 20 s ≈ 10–30+ h | only with a **high-quality ready-made model**; scenes can be real (scans, Poly Haven) |
 
 Rules of thumb:
