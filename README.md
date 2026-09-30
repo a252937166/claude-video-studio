@@ -40,6 +40,7 @@ Then ask Claude Code something like:
   - voice-over and SFX;
   - QA;
   - 3D caveats.
+- `scripts/check_env.py` — environment check per workflow (installs nothing; prints install commands and sizes).
 - `scripts/timed_lyrics.py` — lyrics → a bar-by-bar music prompt, plus `lyrics.json` and `.srt`.
 - `scripts/align_beats.py` — measures the real song's offset against the planned bar grid (uses HyperFrames' `audiomap.json`).
 - `scripts/pixel_sprite.py` — a stdlib pixel-sprite kit: palette grids → PNG, auto-outline, preview sheet.
@@ -58,14 +59,20 @@ Then ask Claude Code something like:
 
 ## Requirements
 
+Run `python3 scripts/check_env.py` after cloning. It checks everything below, installs nothing, and prints the install
+command and rough size for whatever is missing.
+
 - Claude Code (tested with Opus 5.5).
-- Node 18+ (for `npx hyperframes`).
-- Python 3 and ffmpeg.
-- Optional:
-  - `edge-tts` for voice-over;
-  - `numpy` and `soundfile` for SFX;
-  - Blender 4.5 LTS for 3D;
-  - `mediapipe`, `scipy` and Pillow for the 2D motion-transfer scripts.
+- Core, for pixel and flat MVs:
+  - Python 3.9+, Node 18+, ffmpeg;
+  - the HyperFrames skills.
+  - HyperFrames downloads its CLI from npm, and on the first render a headless Chrome (about 400 MB).
+- Optional, by workflow:
+  - beat sync: HyperFrames' `music-to-video` skill plus librosa and soundfile (about 280 MB);
+  - voice-over: `edge-tts`;
+  - 2D motion transfer: `requirements-2d.txt` (about 150 MB);
+  - lip and iris checks: `requirements-face.txt`, which pins mediapipe 0.10.14 (about 600 MB, Python 3.9–3.12);
+  - 3D: Blender 4.5 LTS.
 
 ## Responsible use
 

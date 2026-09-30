@@ -3,6 +3,7 @@
 # export 16:9 / 4:3 / 3:4 cover PNGs. Keep the cover content inside x 240–1680 so the 4:3 crop works.
 # Usage: add_cover.sh video.mp4 cover-16x9.png out.mp4 [cover-3x4.png]
 set -e
+command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || { echo "$(basename "$0"): needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)"; exit 2; }
 IN=$1; COVER=$2; OUT=$3; PORTRAIT=$4
 [ -f "$IN" ] && [ -f "$COVER" ] || { echo "usage: add_cover.sh video.mp4 cover-16x9.png out.mp4 [cover-3x4.png]"; exit 1; }
 W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$IN")

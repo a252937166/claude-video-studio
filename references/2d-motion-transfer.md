@@ -1,5 +1,11 @@
 # 2D character animation by AI motion transfer
 
+> **Dependencies:**
+> - The scripts below need `requirements-2d.txt` (numpy, scipy, Pillow; about 150 MB) and an ffmpeg with libvpx-vp9.
+> - The lip and iris checks also need `requirements-face.txt` (mediapipe 0.10.14; about 600 MB).
+> - Driver videos need Blender.
+> - Run `python3 scripts/check_env.py` and ask the user before installing any of it.
+
 This comes from making one 20 s rap chorus with a single anime illustration. Four approaches were tried:
 
 1. **A character drawn in code.** It came out at TV cut-out puppet level.

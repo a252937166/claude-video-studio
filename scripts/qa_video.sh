@@ -3,6 +3,7 @@
 # contact sheet of frames pulled one by one with ffmpeg -ss (renders can differ from HyperFrames snapshots).
 # Usage: qa_video.sh video.mp4 [out_dir] [n_frames=12]
 set -e
+command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || { echo "$(basename "$0"): needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)"; exit 2; }
 V=$1; OUT=${2:-qa}; N=${3:-12}
 [ -f "$V" ] || { echo "usage: qa_video.sh video.mp4 [out_dir] [n_frames]"; exit 1; }
 mkdir -p "$OUT"

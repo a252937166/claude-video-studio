@@ -3,8 +3,17 @@ VP9-alpha WebM, so the composition's camera plan can be checked with the real ch
 The driver and the green character image share the framing (scripts/make_green.py), so a stand-in shows where the
 real AI take will sit. Needs a clean background plate: render the driver scene once with the character hidden.
 Usage: python scripts/standin_from_driver.py <driver.mp4> <plate.png> <out.webm> [--lo 7] [--hi 14]"""
-import sys, subprocess, numpy as np, scipy.ndimage as ndi
-from PIL import Image
+import os, shutil, sys
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
+_REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-2d.txt"))
+try:
+    import numpy as np, scipy.ndimage as ndi
+    from PIL import Image
+except ImportError as e:
+    sys.exit(f"{os.path.basename(__file__)}: missing Python package '{e.name}'. Install (~150 MB): python3 -m pip install -r {_REQ}")
+if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+    sys.exit(f"{os.path.basename(__file__)}: needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)")
+import subprocess
 src, plate, out = sys.argv[1:4]
 opt = lambda n, d: float(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 LO, HI = opt("--lo", 7), opt("--hi", 14)                   # max channel difference: <= LO transparent, >= HI opaque
