@@ -7,7 +7,16 @@ Semi-transparent edge pixels are un-mixed against the key colour (F = (C - (1 - 
 character's own colour instead of green (no global despill: it turns yellow hair orange). Small alpha specks off the body
 are dropped (largest components kept).
 Usage: python scripts/key_diff.py in.mp4 out.webm [--lo 12] [--hi 40] [--scale 1] [--fps 30] [--corner WxH]"""
-import sys, subprocess, json, numpy as np, scipy.ndimage as ndi
+import os, shutil, sys
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
+_REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-2d.txt"))
+try:
+    import numpy as np, scipy.ndimage as ndi
+except ImportError as e:
+    sys.exit(f"{os.path.basename(__file__)}: missing Python package '{e.name}'. Install (~150 MB): python3 -m pip install -r {_REQ}")
+if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+    sys.exit(f"{os.path.basename(__file__)}: needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)")
+import subprocess, json
 src, out = sys.argv[1], sys.argv[2]
 opt = lambda n, d: type(d)(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 LO, HI, SCALE, FPS, CORNER = opt("--lo", 12.0), opt("--hi", 40.0), opt("--scale", 1.0), opt("--fps", 0), opt("--corner", "")

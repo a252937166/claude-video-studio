@@ -5,9 +5,20 @@ green-excess matte, run MediaPipe FaceMesh (refined; iris landmarks 468-477) on 
 recolour only iris-coloured pixels (hue 20-120, some saturation). Eyelid skin (pink), eye whites (unsaturated) and the
 pupil (dark) are left alone. Input: green-screen footage, any size. Needs mediapipe, scipy, Pillow.
 Usage: python scripts/recolor_iris.py <in.mp4> <out.mp4> [--hue 205] [--debug dir]"""
-import sys, subprocess, json, numpy as np, mediapipe as mp
-from PIL import Image
-from scipy.ndimage import gaussian_filter
+import os, shutil, sys
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
+_REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-face.txt"))
+try:
+    import numpy as np, mediapipe as mp
+    from PIL import Image
+    from scipy.ndimage import gaussian_filter
+except ImportError as e:
+    sys.exit(f"{os.path.basename(__file__)}: missing Python package '{e.name}'. Install (~600 MB, mediapipe 0.10.14 + OpenCV/jax): python3 -m pip install -r {_REQ}")
+if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+    sys.exit(f"{os.path.basename(__file__)}: needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)")
+if not hasattr(mp, "solutions"):
+    sys.exit(f"{os.path.basename(__file__)}: mediapipe {mp.__version__} has no legacy FaceMesh API; install the tested version: python3 -m pip install -r {_REQ}")
+import subprocess, json
 src, out = sys.argv[1], sys.argv[2]
 opt = lambda n, d: type(d)(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else d
 HUE, DBG = opt("--hue", 205.0) / 360.0, opt("--debug", "")

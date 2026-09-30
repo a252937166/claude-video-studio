@@ -8,21 +8,33 @@ description: Make short videos (Douyin/TikTok/Reels/Shorts) with Claude Code as 
 Claude makes video by **writing code that draws every frame**: HTML, CSS and GSAP, rendered to MP4 by [HyperFrames](https://hyperframes.heygen.com). It does not generate pixels the way Sora, Kling or Veo do. Pick styles that code can draw well, and be honest about the rest.
 For 2D character animation, pair the two: Claude renders the motion and does all the post work, and a video model redraws the character every frame (section 5).
 
-## 0. Prerequisites
+## 0. Prerequisites — check first, install nothing without asking
 
-- **HyperFrames** CLI and skills. Pin a version so re-renders stay identical:
+**Before the first build, run `python3 scripts/check_env.py [--project <video dir>]`.** It uses only the standard library
+and installs nothing. It prints what each workflow needs, what is missing, the install command and the rough disk size.
+Show the user the missing items for the workflow they want, and **ask before installing anything**. Some items are large
+(mediapipe with OpenCV/jax is about 600 MB, headless Chrome about 400 MB, Blender about 1 GB).
 
-  ```bash
-  npx skills add heygen-com/hyperframes -s '*' -a claude-code -y   # installs the /hyperframes skill family
-  npx --yes hyperframes@0.8.70 init my-video                        # or: HYPERFRAMES_SKIP_SKILLS=1 if the skill fetch hangs
-  ```
+| Workflow | Needs | Install (only after the user agrees) |
+|---|---|---|
+| Pixel / flat MV (core) | Python 3.9+, ffmpeg + ffprobe, Node 18+, HyperFrames skills | `brew install ffmpeg` (or apt) · `npx skills add heygen-com/hyperframes -s '*' -a claude-code -y` |
+| Beat sync from a real song | HyperFrames' `music-to-video` skill (its `analyze-beatgrid.py`) + librosa, soundfile, numpy | `npx hyperframes skills update music-to-video` (in the project) · `pip install librosa soundfile numpy` (~280 MB) |
+| Voice-over | edge-tts | `pip install edge-tts` (~5 MB; needs network while synthesising) |
+| 2D motion transfer | numpy, scipy, Pillow; ffmpeg with libvpx-vp9 | `pip install -r requirements-2d.txt` (~150 MB) |
+| 2D lip / iris checks | mediapipe **0.10.14** (legacy FaceMesh API; Python 3.9–3.12) | `pip install -r requirements-face.txt` (~600 MB); mediapipe 1.x is untested |
+| 3D / driver videos | Blender 4.5 LTS | blender.org LTS download (~1 GB) |
 
-  Load `/hyperframes` for the core authoring contract.
-- **Python 3** for the scripts in `scripts/`. They use the standard library only, except `align_beats.py`, which reads HyperFrames' `audiomap.json`.
-- Optional:
-  - `edge-tts` for voice-over;
-  - `numpy` and `soundfile` for 8-bit SFX;
-  - `ffmpeg` for QA and covers.
+**What downloads by itself** (say so before the first run):
+- `npx hyperframes@0.8.70 …` fetches the HyperFrames CLI from npm on first use. Pin the version so re-renders stay identical. If the skill fetch hangs during `init`, set `HYPERFRAMES_SKIP_SKILLS=1`.
+- The first `check` / `snapshot` / `render` downloads HyperFrames' headless Chrome (about 400 MB) when it isn't cached. `npx hyperframes@0.8.70 browser ensure` does this up front.
+- Nothing else installs itself. The scripts in `scripts/` stop with the exact install command when a package or ffmpeg is missing, and they print their usage with `--help`.
+- The standard-library scripts need no packages at all: `timed_lyrics.py`, `align_beats.py`, `pixel_sprite.py` and `check_env.py`.
+
+Load `/hyperframes` for the core authoring contract:
+
+```bash
+npx --yes hyperframes@0.8.70 init my-video
+```
 
 ## 1. Choose the style first
 
@@ -55,7 +67,7 @@ AI music apps (Gemini/Lyria, Suno, …) follow timing much better when you give 
    - `lyrics.json` with start and end per line;
    - `lyrics.srt`.
 3. The user generates the song and hands you the MP3.
-4. Run HyperFrames' `analyze-beatgrid.py` on it (`music-to-video` skill) → `audiomap.json`.
+4. Run HyperFrames' `analyze-beatgrid.py` on it → `audiomap.json`. The script ships with the `music-to-video` skill (`npx hyperframes skills update music-to-video`) and needs librosa, soundfile and numpy; see section 0.
 5. `python3 scripts/align_beats.py audiomap.json --bpm 96` measures the **offset** between the plan grid and the real downbeats. It is usually +0.1 to +0.3 s. Every lyric and cut time is then `plan + offset`.
 6. If the generated song is shorter, or stops early, re-time the ending to the real audio. Never stretch the music.
 

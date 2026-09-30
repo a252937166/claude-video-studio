@@ -11,9 +11,20 @@ Output: r (mouth vs vocals) at lags -6..+6 frames. Negative lag = the mouth move
 Reading it: a real match peaks at about -1 to -2 (lips open slightly before the sound) with r around 0.3 or more. A peak far
 from 0 means the clip is offset (shift it, e.g. Kling came back 2 frames early vs its driver); r near 0 means no sync.
 Usage: python lip_sync_check.py clip.mp4 [--audio song.wav] [--metric gap|area] [--t0 S --t1 S] [--head-box x,y,w,h]"""
-import sys, subprocess, json, numpy as np, mediapipe as mp
-from PIL import Image
-from scipy.ndimage import gaussian_filter1d
+import os, shutil, sys
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
+_REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-face.txt"))
+try:
+    import numpy as np, mediapipe as mp
+    from PIL import Image
+    from scipy.ndimage import gaussian_filter1d
+except ImportError as e:
+    sys.exit(f"{os.path.basename(__file__)}: missing Python package '{e.name}'. Install (~600 MB, mediapipe 0.10.14 + OpenCV/jax): python3 -m pip install -r {_REQ}")
+if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
+    sys.exit(f"{os.path.basename(__file__)}: needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg; Debian/Ubuntu: apt install ffmpeg)")
+if not hasattr(mp, "solutions"):
+    sys.exit(f"{os.path.basename(__file__)}: mediapipe {mp.__version__} has no legacy FaceMesh API; install the tested version: python3 -m pip install -r {_REQ}")
+import subprocess, json
 src = sys.argv[1]
 opt = lambda n, d=None: sys.argv[sys.argv.index(n) + 1] if n in sys.argv else d
 AUDIO, METRIC, T0, T1, BOX = opt("--audio", src), opt("--metric", "gap"), float(opt("--t0", 0)), opt("--t1"), opt("--head-box")

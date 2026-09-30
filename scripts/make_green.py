@@ -12,10 +12,15 @@ Source rows are measured from the alpha automatically (head top = first opaque r
 middle of the opaque columns across the top 12 % of the figure). The chin can't be found from alpha: pass --src-chin
 (the chin row on the cut-out) for close framing. Override any of them with --src-head / --src-feet / --src-cx.
 Read the driver's numbers off its first frame (or the renderer's framing export)."""
+import os, shutil, sys
+if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
+_REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-2d.txt"))
+try:
+    import numpy as np
+    from PIL import Image
+except ImportError as e:
+    sys.exit(f"{os.path.basename(__file__)}: missing Python package '{e.name}'. Install (~150 MB): python3 -m pip install -r {_REQ}")
 import argparse
-import numpy as np
-from PIL import Image
-
 ap = argparse.ArgumentParser()
 ap.add_argument("cut"); ap.add_argument("mode", choices=["wide", "close"])
 ap.add_argument("--head-y", type=float, required=True); ap.add_argument("--feet-y", type=float); ap.add_argument("--chin-y", type=float)

@@ -6,7 +6,8 @@ time: real_time = plan_time + offset.
 
 Usage:
     python3 align_beats.py audiomap.json --bpm 96 [--lyrics lyrics.json]
-audiomap.json comes from HyperFrames' analyze-beatgrid.py (music-to-video skill). With --lyrics it writes
+audiomap.json comes from HyperFrames' analyze-beatgrid.py (music-to-video skill: `npx hyperframes skills update
+music-to-video`; that analyzer needs librosa, soundfile, numpy). This script itself is stdlib-only. With --lyrics it writes
 lyrics-audio.json with the shifted times.
 """
 import argparse, json, statistics as st
