@@ -54,6 +54,11 @@ Then ask Claude Code something like:
 - `scripts/echo_trail.py` — dance afterimage (「残影」) with beat flashes.
 - `scripts/freeze_intro.py` — 「人物定格出场」: beat freezes, per-person cutouts that work in group shots, name cards, a group freeze.
 - `scripts/speed_ramp.py` — 「曲线变速卡点」: speed curves with the highlight on the beat, flow-interpolated slow motion.
+- `scripts/redub.py` — re-voices a video line by line with edge-tts (dialect → Mandarin, or a voice that must not be published): sentence groups, the rate fitted to the original timing, and re-timed subtitles.
+- `scripts/clone_squad.py` — 「一人成团」: delayed clones of one dancer standing beside her, like a canon.
+- `scripts/time_scan.py` — 「时间扫描」 on an already-shot clip: a scan line freezes every pixel it passes.
+- `scripts/auto_reframe.py` — landscape → 9:16 with a window that follows the subject (zero-lag smoothing, look room) and an optional explainer preview.
+- `scripts/before_after.py` — an 原片 → AI 成片 reel: the labelled, silent source first, a title card, then the result.
 - `scripts/make_green.py` — frames a cut-out character on flat green to match a driver video's first frame (for Kling / Veo).
 - `scripts/standin_from_driver.py` — difference-keys a driver video against its clean plate into an alpha stand-in, so the camera plan can be rehearsed before paying for generation.
 - `scripts/key_diff.py` — colour-difference keyer for AI green-screen footage, writing VP9-alpha WebM. Unlike chromakey, it keeps dark clothes solid; it also blanks a watermark corner.

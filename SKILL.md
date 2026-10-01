@@ -19,7 +19,7 @@ Show the user the missing items for the workflow they want, and **ask before ins
 |---|---|---|
 | Pixel / flat MV (core) | Python 3.9+, ffmpeg + ffprobe, Node 18+, HyperFrames skills | `brew install ffmpeg` (or apt) · `npx skills add heygen-com/hyperframes -s '*' -a claude-code -y` |
 | Beat sync from a real song | HyperFrames' `music-to-video` skill (its `analyze-beatgrid.py`) + librosa, soundfile, numpy | `npx hyperframes skills update music-to-video` (in the project) · `pip install librosa soundfile numpy` (~280 MB) |
-| Voice-over | edge-tts | `pip install edge-tts` (~5 MB; needs network while synthesising) |
+| Voice-over, re-dub (`redub.py`) | edge-tts (+ soundfile for redub) | `pip install edge-tts soundfile` (~10 MB; needs network while synthesising) |
 | 2D motion transfer | numpy, scipy, Pillow; ffmpeg with libvpx-vp9 | `pip install -r requirements-2d.txt` (~150 MB) |
 | 2D lip / iris checks | mediapipe **0.10.14** (legacy FaceMesh API; Python 3.9–3.12) | `pip install -r requirements-face.txt` (~600 MB); mediapipe 1.x is untested |
 | Editing real footage | numpy, scipy, Pillow, OpenCV (contrib for the guided filter); noisereduce | `pip install -r requirements-edit.txt` (~250 MB) · `pip install noisereduce` |
@@ -124,9 +124,28 @@ Use this when the user hands over their own footage ("cut my slip, add subtitles
 4. **Watermarks.** `scripts/dewatermark.py`: a temporal-min stroke mask plus a texture transplant.
 5. **Graphics.** Do them in HyperFrames: subtitles under the speaker with keyword emphasis, step cards plus a tracker, impact words, stickers, an end card.
 6. **Audio.** `noisereduce` with a noise print taken from the pauses, then loudnorm at −16 LUFS, plus synthesised SFX at the cue times.
-7. **Privacy.** `scripts/face_mosaic.py` before showing people who did not agree to appear.
-8. **Popular edits.** `scripts/echo_trail.py` (舞蹈残影), `scripts/freeze_intro.py` (人物定格出场, which works in group shots), `scripts/speed_ramp.py` (曲线变速卡点, with flow-interpolated slow motion).
-9. **Rights.** Link someone else's reference video instead of embedding it. Use licensed stock (e.g. Mixkit's free licence) and the user's own music.
+7. **Re-dub** (dialect → Mandarin, or a voice that must not be published). `scripts/redub.py`:
+   - one edge-tts call per sentence group, the rate fitted to the original span;
+   - the subtitles re-timed from WordBoundary events;
+   - the bed is level-matched room tone cut from voice-free pauses, never the original voice;
+   - also rewrite dialect words in stickers and labels.
+8. **Privacy.** `scripts/face_mosaic.py` before showing people who did not agree to appear.
+9. **Popular edits.**
+   - `scripts/echo_trail.py` (舞蹈残影);
+   - `scripts/freeze_intro.py` (人物定格出场, which works in group shots);
+   - `scripts/speed_ramp.py` (曲线变速卡点, with flow-interpolated slow motion).
+10. **Extensions.**
+    - `scripts/clone_squad.py` (一人成团: delayed clones of one dancer);
+    - `scripts/time_scan.py` (时间扫描 on an already-shot clip);
+    - `scripts/auto_reframe.py` (横屏转竖屏 that follows the subject, with zero-lag smoothing).
+11. **Show the result against the source.** `scripts/before_after.py` builds an 原片 → AI 成片 reel:
+    - the raw clip, labelled and silent;
+    - a title card;
+    - the result with its own audio.
+12. **Rights.**
+    - Link someone else's reference video or tutorial instead of embedding it.
+    - Put quotes from tutorials or comments in quotation marks only when they are verbatim; check them against the transcript.
+    - Use licensed stock (e.g. Mixkit's free licence) and the user's own music.
 
 ## 7. Voice-over and SFX (explainers / PSAs)
 

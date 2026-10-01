@@ -6,6 +6,11 @@ The output was a 2:08 "time freeze" edit: the thrower and her water hang in mid-
 
 Three popular Douyin edits were then recreated on free stock footage: 舞蹈残影, 人物定格出场 and 曲线变速卡点.
 
+Later additions:
+- the PSA was re-dubbed from Sichuanese into Mandarin (`redub.py`);
+- three effects of our own were built: 一人成团, 时间扫描 and 横屏转竖屏;
+- every result was shown as an 原片 → AI 成片 reel.
+
 > **Dependencies** (run `python3 scripts/check_env.py`, then ask the user before installing anything):
 > - `requirements-edit.txt`: OpenCV and friends, about 250 MB.
 > - `requirements-face.txt`: mediapipe, about 600 MB.
@@ -62,7 +67,65 @@ Three popular Douyin edits were then recreated on free stock footage: 舞蹈残�
 | 人物定格出场 (freeze intro) | `freeze_intro.py` | Full-frame segmentation fails on groups in low light, and MediaPipe Pose picks the most prominent person. So paint everything outside the target's box with the clean plate (temporal median), segment a square crop, and intersect with a pose envelope. Confident skeleton-core pixels survive the plate check; fill holes. Name cards on stock people: describe clothing, never invent real names. |
 | 曲线变速卡点 (speed ramp) | `speed_ramp.py` | Speed is `fast − (fast − slow)·exp(−((t − hit)/w)²)`, with the hit frame on a beat. The script errors if the source range leaves the clip. DIS optical-flow interpolation below 0.9×, frame-blend motion blur above 1.4×. A live 「速度 ×0.25」 readout teaches the curve. |
 
-Typical render times on an M4 Pro, 1080p: echo trail 12.5 s in about 2 min, freeze intro 14 s in about 40 s, speed ramp 12.5 s in about 20 s.
+Typical render times on an M4 Pro, 1080p:
+- echo trail, 12.5 s of video: about 2 min;
+- freeze intro, 14 s: about 40 s;
+- speed ramp, 12.5 s: about 20 s.
+
+## Extensions (our own effects, no tutorial needed)
+| Effect | Script | What matters |
+|---|---|---|
+| 一人成团 (clone squad) | `clone_squad.py` | Clone k is the dancer from k × delay ago (half a beat reads as a canon), shifted k × spread sideways, scaled scale^k about her feet so it stands further back, dimmed, with a soft contact shadow. Firm up the clone masks (`(m − 0.3) / 0.4`) or fast moves turn see-through. Clones pop in on successive beats. Locked-off shot, one person. 12.5 s at 1080p takes about 1 min 40 s. |
+| 时间扫描 (time-warp scan) | `time_scan.py` | A frozen canvas is filled strip by strip as the line passes; output = canvas behind the line, live frame ahead. The line moves mostly linearly with soft ends; hold the fully frozen frame about 1.2 s, then flash back to live. Groups of dancers give the most fun distortions. About 12 s to render. |
+| 横屏转竖屏 (auto reframe) | `auto_reframe.py` | Pose centre per frame (nose, shoulders, hips), gaps interpolated, then a **zero-lag** forward-backward Gaussian (offline, so the frame anticipates instead of chasing), plus look-room lead from the smoothed velocity, clamped inside the picture. `--preview` writes the side-by-side explainer. Choose a clip where the subject crosses the frame, or the demo shows nothing. |
+
+## Re-dub: dialect to Mandarin, or a voice that must not be published
+`redub.py lines.json voice.wav --subs subs.json --total S`
+
+**Lines.** Write them from the transcript, on the output clock.
+- Rewrite only the dialect words, e.g. 等一哈→等一下, 啥子→什么, 狗儿和猫儿→小狗、小猫, 板板车→板车.
+- Keep the speaker's meaning and order.
+
+**Voice.**
+- Match the speaker. Measure the F0 with pyin: about 265 Hz means a woman's voice, so use `zh-CN-XiaoxiaoNeural`.
+- Synthesise a sentence that the subtitles split into one group (one TTS call), or each fragment ends with a falling, final-sounding tone.
+
+**Fitting the rate.**
+- Slower than −10 % sounds drawled.
+- Faster than about +22 % sounds rushed. Exceed it only if the line would otherwise run into the next one.
+- Start each group where the original line started. Stickers and gestures then stay in sync.
+
+**Subtitles.**
+- edge-tts `boundary="WordBoundary"` gives word offsets. Spread them per character to cut the group back into its subtitle lines.
+- Captions lead the voice by about 0.1 s, which reads well.
+
+**Bed.** Never put the original track under the dub.
+- Loop room tone cut from pauses of the cleaned original. Check every chunk with pyin first: zero voiced frames.
+- Level-match the chunks (about −38.5 dBFS) or the loop pumps.
+- Keep the original only where it is voice-free (the splash). Check that with pyin **and** a spectrogram: ASR "hears" words like 没有 or 嗯 in rustle and in SFX sweeps.
+
+**Graphics.** Re-render the subtitles, and grep the composition for dialect text in stickers and labels (板板车 on a cart).
+
+**Check.** Transcribe the dub back with `transcribe_zh.py`. The text should match the script.
+
+## Before / after reels
+`before_after.py out.mp4 --after effect.mp4 --before raw.mp4@T0-T1 [...] --note "…" --crf 22`
+- Show 3 to 7 s of the untouched source:
+  - scaled to the result's size;
+  - labelled 「原片 · 没加任何特效」;
+  - **silent**, so a private voice or plain noise isn't published.
+- Then a 0.8 s card, then the result with its audio.
+- Mosaic the faces in the raw part too: run `face_mosaic.py` on a 1080p cut of the raw ranges.
+- For a time-freeze job, show both the start of the take and the real throw at the end. Viewers then see that the action happened minutes later.
+
+## Researching tutorials for a "manual vs AI" write-up
+- Read 1–2 popular tutorials per effect:
+  - `douyin-skills get-video-detail` gives likes, collects and comments;
+  - transcribe the narration locally with `transcribe_zh.py`;
+  - read the on-screen steps from contact sheets.
+- Keep the downloads in a scratch folder. Link and credit; never embed.
+- Count operations with one rule: each tap, drag, slider move or text entry = 1. Mark the repeated unit (per person, per beat, per layer, per freeze). Say that the totals are estimates.
+- Quotes: put words in quotation marks only when they are verbatim, from comments or the transcript. A research summary paraphrased two "quotes"; check them before publishing.
 
 ## Sourcing and rights
 - **Stock video.** The Mixkit Stock Video Free License allows commercial and non-commercial use, modification and distribution, with no attribution required (credit is appreciated). Check each clip's licence on Pexels or Pixabay the same way.
