@@ -63,6 +63,16 @@ if mod("mediapipe"):
     if not mp_ok: mp_note = f"installed mediapipe {v[0] if v else '?'} lacks the legacy FaceMesh API; " + mp_note
 rows.append(("2D lip/iris checks", "mediapipe 0.10.x with FaceMesh", mp_ok, mp_note))
 
+ed = all(mod(m) for m in ("numpy", "scipy", "PIL", "cv2"))
+rows.append(("AI editing (real footage)", "numpy + scipy + Pillow + OpenCV", ed, "python3 -m pip install -r requirements-edit.txt  (~250 MB)"))
+xi = mod("cv2") and bool(run([sys.executable, "-c", "import cv2; print(hasattr(cv2, 'ximgproc'))"]).strip() == "True")
+rows.append(("AI editing (real footage)", "OpenCV contrib (guided filter, optional)", xi, "python3 -m pip install opencv-contrib-python  (replaces opencv-python)"))
+rows.append(("AI editing (real footage)", "face / pose / person masks: mediapipe 0.10.x", mp_ok, "python3 -m pip install -r requirements-face.txt  (~600 MB)"))
+rows.append(("AI editing (real footage)", "noisereduce (speech denoise)", mod("noisereduce"), "python3 -m pip install noisereduce  (~5 MB)"))
+asr = mod("funasr") and mod("torch")
+rows.append(("Chinese transcription", "FunASR + torch (transcribe_zh.py)", asr,
+             "python3 -m pip install -r requirements-asr.txt  (~1 GB; models 1-3 GB download from ModelScope on first run; Python 3.10-3.12)"))
+
 blender = (os.environ.get("BLENDER") if os.path.exists(os.environ.get("BLENDER", "")) else None) or shutil.which("blender") \
     or next(iter(glob.glob("/Applications/Blender*.app/Contents/MacOS/Blender")), None)
 rows.append(("3D / drivers", "Blender 4.5 LTS", bool(blender), "https://www.blender.org/download/lts/  (~1 GB); a portable copy works too: set BLENDER=/path/to/Blender"))
