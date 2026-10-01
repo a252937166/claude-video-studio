@@ -69,6 +69,8 @@ xi = mod("cv2") and bool(run([sys.executable, "-c", "import cv2; print(hasattr(c
 rows.append(("AI editing (real footage)", "OpenCV contrib (guided filter, optional)", xi, "python3 -m pip install opencv-contrib-python  (replaces opencv-python)"))
 rows.append(("AI editing (real footage)", "face / pose / person masks: mediapipe 0.10.x", mp_ok, "python3 -m pip install -r requirements-face.txt  (~600 MB)"))
 rows.append(("AI editing (real footage)", "noisereduce (speech denoise)", mod("noisereduce"), "python3 -m pip install noisereduce  (~5 MB)"))
+rows.append(("AI editing (real footage)", "re-dub (redub.py): edge-tts + soundfile", mod("edge_tts") and mod("soundfile"),
+             "python3 -m pip install edge-tts soundfile  (~10 MB; edge-tts needs network at synthesis time)"))
 asr = mod("funasr") and mod("torch")
 rows.append(("Chinese transcription", "FunASR + torch (transcribe_zh.py)", asr,
              "python3 -m pip install -r requirements-asr.txt  (~1 GB; models 1-3 GB download from ModelScope on first run; Python 3.10-3.12)"))
