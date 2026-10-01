@@ -23,7 +23,7 @@ Show the user the missing items for the workflow they want, and **ask before ins
 | 2D motion transfer | numpy, scipy, Pillow; ffmpeg with libvpx-vp9 | `pip install -r requirements-2d.txt` (~150 MB) |
 | 2D lip / iris checks | mediapipe **0.10.14** (legacy FaceMesh API; Python 3.9–3.12) | `pip install -r requirements-face.txt` (~600 MB); mediapipe 1.x is untested |
 | Editing real footage | numpy, scipy, Pillow, OpenCV (contrib for the guided filter); noisereduce | `pip install -r requirements-edit.txt` (~250 MB) · `pip install noisereduce` |
-| Face mosaic, person cutouts | mediapipe **0.10.14** | `pip install -r requirements-face.txt` (~600 MB) |
+| Face mosaic, person cutouts | mediapipe **0.10.14**; on macOS the cut-outs use Apple Vision instead (needs `swiftc` from the Xcode command line tools, no model download) | `pip install -r requirements-face.txt` (~600 MB) · `xcode-select --install` |
 | Chinese transcription | FunASR + torch (Python 3.10–3.12) | `pip install -r requirements-asr.txt` (~1 GB; models 1–3 GB from ModelScope on first run) |
 | 3D / driver videos | Blender 4.5 LTS | blender.org LTS download (~1 GB) |
 
@@ -130,20 +130,30 @@ Use this when the user hands over their own footage ("cut my slip, add subtitles
    - the bed is level-matched room tone cut from voice-free pauses, never the original voice;
    - also rewrite dialect words in stickers and labels.
 8. **Privacy.** `scripts/face_mosaic.py` before showing people who did not agree to appear.
-9. **Popular edits.**
-   - `scripts/echo_trail.py` (舞蹈残影);
-   - `scripts/freeze_intro.py` (人物定格出场, which works in group shots);
-   - `scripts/speed_ramp.py` (曲线变速卡点, with flow-interpolated slow motion).
-10. **Extensions.**
-    - `scripts/clone_squad.py` (一人成团: delayed clones of one dancer);
-    - `scripts/time_scan.py` (时间扫描 on an already-shot clip);
-    - `scripts/auto_reframe.py` (横屏转竖屏 that follows the subject, with zero-lag smoothing).
-11. **Show the result against the source.** `scripts/before_after.py` builds an 原片 → AI 成片 reel:
+9. **Mattes.** `scripts/person_matte.py` writes per-frame mattes that the effects below take with `--mattes`:
+   - on macOS it uses Apple Vision (no model download; hair and fingers stay clean), elsewhere MediaPipe;
+   - `--backend vision-fg` also keeps what the person holds or rides (a skateboard);
+   - `--drop-static` removes a mural, a poster or a parked car that gets detected as the subject;
+   - look at the `--preview` sheet before building on the mattes. MediaPipe mattes are too blocky for cut-outs.
+10. **Popular edits.**
+    - `scripts/echo_trail.py` (舞蹈残影; pass `--mattes`);
+    - `scripts/freeze_intro.py` (人物定格出场, which works in group shots; Vision mattes on macOS);
+    - `scripts/speed_ramp.py` (曲线变速卡点, with flow-interpolated slow motion).
+11. **Extensions.**
+    - `scripts/clone_squad.py` (一人成团): clones stand BEHIND the dancer, scaled about the horizon line, with offsets fitted so no clone is cut by the frame edge.
+    - `scripts/pop_out.py` (冲出画框 / 裸眼 3D): white bars over the scene, the subject passes in front of them. Ramp the clip to slow motion first.
+    - Utilities that make weak showcases: `scripts/auto_reframe.py` (横屏转竖屏) and `scripts/time_scan.py` (时间扫描).
+12. **Show the result against the source.** `scripts/before_after.py` builds an 原片 → AI 成片 reel:
     - the raw clip, labelled and silent;
     - a title card;
     - the result with its own audio.
-12. **Rights.**
-    - Link someone else's reference video or tutorial instead of embedding it.
+13. **"Manual vs AI" write-ups.** Go effect by effect, each in the same order:
+    - their original first: `scripts/tutorial_reel.py` cuts a tutorial into "the effect at normal speed, then the teaching part in fast-forward next to a step list";
+    - then a step figure: one numbered screenshot per manual step;
+    - then our version with `before_after.py`.
+    - Do not put all the tutorials in one section and all the AI results in another. A link alone does not show the effect.
+14. **Rights.**
+    - Someone else's video: link it by default. Embed an excerpt only when the user decides to; then keep it short, keep the burned-in credit (author, title, 版权归原作者), link the original, and say in the hand-off notes how to swap it for a link.
     - Put quotes from tutorials or comments in quotation marks only when they are verbatim; check them against the transcript.
     - Use licensed stock (e.g. Mixkit's free licence) and the user's own music.
 
