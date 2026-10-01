@@ -54,8 +54,12 @@ Then ask Claude Code something like:
 - `scripts/echo_trail.py` — dance afterimage (「残影」) with beat flashes.
 - `scripts/freeze_intro.py` — 「人物定格出场」: beat freezes, per-person cutouts that work in group shots, name cards, a group freeze.
 - `scripts/speed_ramp.py` — 「曲线变速卡点」: speed curves with the highlight on the beat, flow-interpolated slow motion.
+- `scripts/person_matte.py` — per-frame mattes for a clip with the best segmenter on the machine: Apple Vision on macOS (no download; also "lift subject" masks that keep a skateboard), MediaPipe elsewhere; `--drop-static` removes murals, posters and parked cars.
+- `scripts/vision_matte.py` — the Apple Vision helper behind it (a short Swift tool compiled once into `~/.cache`), importable.
+- `scripts/pop_out.py` — 「冲出画框 / 裸眼 3D」: white bars over the scene, the subject passes in front of them and casts a shadow on them.
+- `scripts/tutorial_reel.py` — cuts someone's tutorial into "their effect first, then the teaching part in fast-forward next to a step list", with the credit burned in.
 - `scripts/redub.py` — re-voices a video line by line with edge-tts (dialect → Mandarin, or a voice that must not be published): sentence groups, the rate fitted to the original timing, and re-timed subtitles.
-- `scripts/clone_squad.py` — 「一人成团」: delayed clones of one dancer standing beside her, like a canon.
+- `scripts/clone_squad.py` — 「一人成团」: delayed clones of one dancer in a V formation behind her (scaled about the horizon, fitted inside the frame, contact shadows), like a canon.
 - `scripts/time_scan.py` — 「时间扫描」 on an already-shot clip: a scan line freezes every pixel it passes.
 - `scripts/auto_reframe.py` — landscape → 9:16 with a window that follows the subject (zero-lag smoothing, look room) and an optional explainer preview.
 - `scripts/before_after.py` — an 原片 → AI 成片 reel: the labelled, silent source first, a title card, then the result.

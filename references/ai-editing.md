@@ -8,8 +8,8 @@ Three popular Douyin edits were then recreated on free stock footage: 舞蹈残�
 
 Later additions:
 - the PSA was re-dubbed from Sichuanese into Mandarin (`redub.py`);
-- three effects of our own were built: 一人成团, 时间扫描 and 横屏转竖屏;
-- every result was shown as an 原片 → AI 成片 reel.
+- effects of our own were built: 一人成团 and 冲出画框 (kept), 时间扫描 and 横屏转竖屏 (dropped from the article);
+- every result was shown as an 原片 → AI 成片 reel, next to an excerpt of the Douyin tutorial it answers.
 
 > **Dependencies** (run `python3 scripts/check_env.py`, then ask the user before installing anything):
 > - `requirements-edit.txt`: OpenCV and friends, about 250 MB.
@@ -63,21 +63,31 @@ Later additions:
 ## Popular edits: recipes
 | Effect | Script | What matters |
 |---|---|---|
-| 舞蹈残影 (afterimage) | `echo_trail.py` | Locked-off shot of one dancer. Selfie segmentation plus a guided filter, last N×delay frames recoloured neon behind the live dancer, background dimmed. Beat flash and zoom punch, with white silhouettes on downbeats. |
-| 人物定格出场 (freeze intro) | `freeze_intro.py` | Full-frame segmentation fails on groups in low light, and MediaPipe Pose picks the most prominent person. So paint everything outside the target's box with the clean plate (temporal median), segment a square crop, and intersect with a pose envelope. Confident skeleton-core pixels survive the plate check; fill holes. Name cards on stock people: describe clothing, never invent real names. |
+| 舞蹈残影 (afterimage) | `echo_trail.py` | Locked-off shot of one dancer. Pass `--mattes` (person_matte.py `--drop-static`): the ghosts then have crisp outlines; the built-in MediaPipe path gives soft blobs. Last N×delay frames recoloured neon behind the live dancer, background dimmed. Beat flash and zoom punch, with white silhouettes on downbeats. |
+| 人物定格出场 (freeze intro) | `freeze_intro.py` | Full-frame segmentation fails on groups in low light, and MediaPipe Pose picks the most prominent person. So paint everything outside the target's box with the clean plate (temporal median), segment a square crop, and intersect with a pose envelope. Confident skeleton-core pixels survive the plate check; fill holes. Name cards on stock people: describe clothing, never invent real names. On macOS the crop is matted with Apple Vision instead (cleaner outlines); set `"margin": 8` on a person whose neighbour's shoe or hand sits next to the box. |
 | 曲线变速卡点 (speed ramp) | `speed_ramp.py` | Speed is `fast − (fast − slow)·exp(−((t − hit)/w)²)`, with the hit frame on a beat. The script errors if the source range leaves the clip. DIS optical-flow interpolation below 0.9×, frame-blend motion blur above 1.4×. A live 「速度 ×0.25」 readout teaches the curve. |
 
 Typical render times on an M4 Pro, 1080p:
-- echo trail, 12.5 s of video: about 2 min;
-- freeze intro, 14 s: about 40 s;
-- speed ramp, 12.5 s: about 20 s.
+- echo trail, 12.5 s of video: mattes 32 s + render 1 min 25 s;
+- freeze intro, 14 s: about 45 s;
+- speed ramp, 12.5 s: about 20 s;
+- clone squad, 12.5 s: mattes about 30 s + render about 1 min.
+
+## Mattes first: `person_matte.py`
+Cut-out quality decides whether an effect looks real. MediaPipe's selfie segmentation gives blocky hair, dissolved arms and halos; the user called the first 一人成团 「质量很差，裁切都不完整」.
+- **macOS:** Apple Vision. `--backend vision` is person segmentation at quality "accurate"; `--backend vision-fg` is the foreground-instance ("lift subject") mask, which also keeps a skateboard or a ball. No model download; a short Swift helper is compiled once (`vision_matte.py`). About 0.1 s per 1080p frame.
+- **Elsewhere:** MediaPipe (fallback). Good enough for neon silhouettes, not for clean cut-outs.
+- **`--drop-static`.** Vision detects a mural or a poster of a person, and vision-fg a parked car. The flag removes what is "always masked and never changing", plus any blob that looks like the empty scene (temporal-median plate). Only for a moving subject in a locked-off shot.
+- Always look at the `--preview` sheet (cut-outs on magenta) before compositing.
+- `echo_trail.py`, `clone_squad.py` and `pop_out.py` take the folder with `--mattes`. `freeze_intro.py` calls Vision per freeze frame on its plate-painted crop.
 
 ## Extensions (our own effects, no tutorial needed)
 | Effect | Script | What matters |
 |---|---|---|
-| 一人成团 (clone squad) | `clone_squad.py` | Clone k is the dancer from k × delay ago (half a beat reads as a canon), shifted k × spread sideways, scaled scale^k about her feet so it stands further back, dimmed, with a soft contact shadow. Firm up the clone masks (`(m − 0.3) / 0.4`) or fast moves turn see-through. Clones pop in on successive beats. Locked-off shot, one person. 12.5 s at 1080p takes about 1 min 40 s. |
-| 时间扫描 (time-warp scan) | `time_scan.py` | A frozen canvas is filled strip by strip as the line passes; output = canvas behind the line, live frame ahead. The line moves mostly linearly with soft ends; hold the fully frozen frame about 1.2 s, then flash back to live. Groups of dancers give the most fun distortions. About 12 s to render. |
-| 横屏转竖屏 (auto reframe) | `auto_reframe.py` | Pose centre per frame (nose, shoulders, hips), gaps interpolated, then a **zero-lag** forward-backward Gaussian (offline, so the frame anticipates instead of chasing), plus look-room lead from the smoothed velocity, clamped inside the picture. `--preview` writes the side-by-side explainer. Choose a clip where the subject crosses the frame, or the demo shows nothing. |
+| 一人成团 (clone squad) | `clone_squad.py` | Row k is the dancer from k × delay ago (half a beat reads as a canon). **Stage it in depth**: scale each clone about the horizon line (`--horizon`, where the camera's eye level cuts the frame, e.g. 0.46), so its feet rise and its head sinks like someone standing further back. Scaling about the feet makes small people on the same line. **Fit**: clamp the sideways offsets from the dancer's box over the whole clip, so no clone is cut by the frame edge. Soft contact shadows; far rows slightly darker; draw far to near, the live dancer last. Clones slide out of her on successive beats and back in at the end. |
+| 冲出画框 (pop-out, 裸眼 3D) | `pop_out.py` | Three even white bars over the scene; the subject is drawn in front of them and its blurred shadow falls on the bars only. Ramp the clip to slow motion first (`speed_ramp.py` with `"readout": false, "punch": false`), then matte THAT clip (`--backend vision-fg --drop-static` for a skater + board). `--mode frame` (subject leaves a white-bordered frame) needs a subject that is whole in the shot. |
+| 横屏转竖屏 (auto reframe) | `auto_reframe.py` | A useful utility, but a weak showcase (the user: 「没有意思很无趣」). Pose centre per frame, zero-lag forward-backward Gaussian, look-room lead, clamped inside the picture. |
+| 时间扫描 (time-warp scan) | `time_scan.py` | Strip-by-strip freeze as a line sweeps. On a dance group the result is chopped-up bodies with stair steps; not shown in the article. |
 
 ## Re-dub: dialect to Mandarin, or a voice that must not be published
 `redub.py lines.json voice.wav --subs subs.json --total S`
@@ -118,18 +128,40 @@ Typical render times on an M4 Pro, 1080p:
 - Mosaic the faces in the raw part too: run `face_mosaic.py` on a 1080p cut of the raw ranges.
 - For a time-freeze job, show both the start of the take and the real throw at the end. Viewers then see that the action happened minutes later.
 
-## Researching tutorials for a "manual vs AI" write-up
-- Read 1–2 popular tutorials per effect:
-  - `douyin-skills get-video-detail` gives likes, collects and comments;
-  - transcribe the narration locally with `transcribe_zh.py`;
-  - read the on-screen steps from contact sheets.
-- Keep the downloads in a scratch folder. Link and credit; never embed.
+## A "manual vs AI" write-up: the structure the user asked for
+The first two versions were rejected (「不是这样的」, then 「你的文档写的真的不行啊」). What was asked for, in the user's words:
+- 「一种类型的应该是先抖音的，再我们ai剪辑的这样对比」;
+- 「抖音的原视频应该直接放上去，点过去看就没有效果了」;
+- 「教学部分就超快速过一下，说明很麻烦就行了」;
+- 「配图说明过程……容易看懂手动多复杂」.
+
+Go effect by effect, each in the same order:
+1. **Their original, embedded.** `tutorial_reel.py config.json out.mp4`:
+   - the effect part at normal speed, cropped from the tutorial and shown large;
+   - then the teaching part in fast-forward (4–6×) as a phone on the left, with a step list that fills up as the steps go by;
+   - then a hold with the step total.
+   - The credit is burned in (author, title, likes, 版权归原作者), and the article links the original.
+2. **A step figure.** One numbered screenshot per manual step (crop the tutorial frame to its UI), a short caption each, and a footer with what has to be repeated. Build it as HTML → PNG.
+3. **Our version.** `before_after.py`: the untouched source, then the result.
+4. A few sentences: what the AI did differently, what went wrong.
+
+After all effects, add one recap table: manual steps and estimated operations vs what the AI was given and how long it took.
+
+**Getting the tutorial material**
+- `douyin-skills get-video-detail` gives likes, collects and comments.
+- The page's default stream is about 576p at 200 kbps. Capture the page's own `aweme/detail` response over CDP and download the best `bit_rate` entry (1080p) with a Referer header.
+- Transcribe the narration with `transcribe_zh.py`; its sentence times place each step. Check them against the on-screen captions on labelled contact sheets.
+- Find the preview area for the effect crop from rows that change over time (`std` over frames). A brightness test fails on dark scenes.
+- Level the excerpt (effect part to about −19 dBFS RMS), then add the step pops at a fixed level.
+
+**Counting and quoting**
 - Count operations with one rule: each tap, drag, slider move or text entry = 1. Mark the repeated unit (per person, per beat, per layer, per freeze). Say that the totals are estimates.
-- Quotes: put words in quotation marks only when they are verbatim, from comments or the transcript. A research summary paraphrased two "quotes"; check them before publishing.
+- Put words in quotation marks only when they are verbatim, from comments or the transcript. A research summary paraphrased two "quotes"; check them before publishing.
+- Check the facts shown beside an excerpt. An earlier label said five dancers; there were four.
 
 ## Sourcing and rights
 - **Stock video.** The Mixkit Stock Video Free License allows commercial and non-commercial use, modification and distribution, with no attribution required (credit is appreciated). Check each clip's licence on Pexels or Pixabay the same way.
-- **Someone else's video used as the reference for an effect.** Link to it and describe it; don't download it into your article or re-post it.
+- **Someone else's video** (a reference for an effect, a tutorial). Link to it and describe it by default. Embedding an excerpt is the user's decision; when they decide to, keep it short, keep the credit visible, link the original, and say in the hand-off notes that a video can be swapped for its link if the author objects.
 - **Music.** Use the user's own tracks or properly licensed ones. Don't put copyrighted song lyrics on screen.
 - **Faces.** Mosaic people who didn't agree to appear (see the privacy step).
 
@@ -138,3 +170,5 @@ Typical render times on an M4 Pro, 1080p:
 - **Auto camera moves.** Unrequested zooms were rejected. Default to one fixed framing.
 - **Downloads.** Ask before downloading ASR models (1.6–3 GB). ModelScope is much faster than Hugging Face from China.
 - **ffmpeg builds without `drawtext`.** Render text with Pillow or HyperFrames instead.
+- **Showcase effects are judged on finish.** The first 一人成团 used MediaPipe mattes and let clones run off the frame; it was rejected. Redo with Vision mattes, depth staging and the fit. A correct but plain utility (横屏转竖屏) was rejected as boring.
+- **Compare like with like.** Once their original sits next to ours, rough mattes show. The 残影 and 定格出场 recreations were redone with Vision mattes for that reason.

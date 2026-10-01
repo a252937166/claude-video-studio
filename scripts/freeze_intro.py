@@ -9,6 +9,10 @@ Person cutouts work in crowded, locked-off shots (one person per box):
   3. a pose-guided body envelope (skeleton drawn as thick limbs + head disc) removes neighbours and props that touch them;
   4. static props that match the plate (a parked car behind an arm) are dropped unless the pixel is a confident person pixel
      on the skeleton core; interior holes are filled; a guided filter makes the edge follow the image.
+  On macOS, step 2 uses Apple Vision's person segmentation instead (vision_matte.py, no download): its matte keeps hair and
+  loose clothes, so steps 3-4 shrink to "largest blob, holes filled"; a person may set "envelope": true to get the pose
+  envelope back when a neighbour touches them, and "margin": px (default 40) to paint closer to the box when a
+  neighbour's shoe or hand sits right next to it. "matte": "mediapipe" in the config forces the old path.
 Config (JSON):
   {"video": "in.mp4", "audio": "music.wav", "audio_start": 0, "width": 1920, "bpm": 96,
    "timeline": [{"play": [0, 1.25]},
@@ -69,13 +73,19 @@ raw = subprocess.check_output(["ffmpeg", "-v", "error", "-i", SRC, "-vf", f"fps=
                                "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
 PLATE = np.median(np.frombuffer(raw, np.uint8).reshape(-1, OH, OW, 3), 0).astype(np.uint8)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import vision_matte
+    VISION = C.get("matte", "auto") != "mediapipe" and bool(vision_matte.tool("vision"))
+except Exception:
+    VISION = False
 _seg = mp.solutions.selfie_segmentation.SelfieSegmentation(model_selection=0)
 _pose = mp.solutions.pose.Pose(static_image_mode=True, model_complexity=2, min_detection_confidence=0.3)
 LIMBS = [(11, 13), (13, 15), (12, 14), (14, 16), (23, 25), (25, 27), (24, 26), (26, 28), (27, 31), (28, 32), (27, 29), (28, 30),
          (15, 19), (16, 20), (15, 17), (16, 18)]
 
 
-def person_mask(f, box, margin=40):
+def person_mask(f, box, margin=40, envelope=False):
     H, W = f.shape[:2]; x0, y0, x1, y1 = box
     keep = np.zeros((H, W), np.float32)
     keep[max(0, y0 - margin):min(H, y1 + margin), max(0, x0 - margin):min(W, x1 + margin)] = 1
@@ -85,7 +95,20 @@ def person_mask(f, box, margin=40):
     S = int(min(max(x1 - x0, y1 - y0) * 1.2, H, W))
     X0 = int(np.clip(cx - S / 2, 0, W - S)); Y0 = int(np.clip(cy - S / 2, 0, H - S))
     crop = np.ascontiguousarray(g[Y0:Y0 + S, X0:X0 + S])
-    m = _seg.process(crop).segmentation_mask.astype(np.float32)
+    vm = vision_matte.mask_of(crop, "vision") if VISION else None
+    if vm is not None and not envelope:                       # Apple Vision: the matte is already clean
+        b = vm > 0.5
+        lab, n = ndi.label(b)
+        if n > 1:                                             # the person = the biggest blob + blobs that sit inside the box
+            sizes = ndi.sum(b, lab, range(1, n + 1)); main = sizes.max()
+            inbox = np.zeros((S, S), bool); inbox[max(0, y0 - Y0):max(0, y1 - Y0), max(0, x0 - X0):max(0, x1 - X0)] = True
+            inside = ndi.sum(b & inbox, lab, range(1, n + 1))
+            b = np.isin(lab, [k + 1 for k in range(n) if sizes[k] == main or (sizes[k] >= 0.02 * main and inside[k] >= 0.6 * sizes[k])])
+        b = ndi.binary_fill_holes(b)
+        mm = np.maximum(vm, 0.98 * b) * cv2.GaussianBlur(cv2.dilate(b.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 2)
+        out = np.zeros((H, W), np.float32); out[Y0:Y0 + S, X0:X0 + S] = np.clip(mm, 0, 1)
+        return out
+    m = vm if vm is not None else _seg.process(crop).segmentation_mask.astype(np.float32)
     r = _pose.process(crop)
     env = np.zeros((S, S), np.uint8); core = np.zeros((S, S), np.uint8)
     if r.pose_landmarks:
@@ -174,7 +197,7 @@ def title(img, text, sub, prog):
 
 def freeze_frames(t, hold, people, group=None):
     f = grab(t).astype(np.float32)
-    masks = [person_mask(f.astype(np.uint8), tuple(p["box"])) for p in people]
+    masks = [person_mask(f.astype(np.uint8), tuple(p["box"]), margin=int(p.get("margin", 40)), envelope=bool(p.get("envelope"))) for p in people]
     if DBG:
         os.makedirs(DBG, exist_ok=True)
         for i, m in enumerate(masks): cv2.imwrite(f"{DBG}/mask-{t:.2f}-{i}.png", (m * 255).astype(np.uint8))

@@ -8,18 +8,23 @@ Beat-synced (with --bpm/--offset or --beats): every beat boosts the trail for 0.
 downbeat (bar start) also freezes a white silhouette that stays and fades over 0.7 s.
 Works best on a locked-off shot of one person (the background must not move with her).
 Usage: python echo_trail.py in.mp4 out.mp4 [--t0 S] [--dur S] [--width 1920] [--copies 5] [--delay 4] [--dim 0.72] [--model 1]
-                            [--bpm 96 --offset 0 | --beats beats.json] [--beats-per-bar 4]
+                            [--mattes DIR] [--bpm 96 --offset 0 | --beats beats.json] [--beats-per-bar 4]
                             [--audio music.wav [--audio-start S]] [--label "AI 复刻 · 舞蹈残影"]
-Needs numpy, opencv-contrib (guided filter; falls back to a blur), mediapipe 0.10.x, Pillow for --label, ffmpeg."""
+--mattes: a folder made by `person_matte.py in.mp4 DIR --t0 .. --dur .. --drop-static` (Apple Vision on macOS): crisp ghost
+          outlines with hair and fingers instead of MediaPipe's soft blobs; --t0/--dur/--width then come from that folder.
+Needs numpy, opencv-contrib (guided filter; falls back to a blur), Pillow for --label, ffmpeg; mediapipe 0.10.x unless
+--mattes is given."""
 import os, sys, json, subprocess, shutil
 if len(sys.argv) < 3 or sys.argv[1] in ("-h", "--help"): print(__doc__); sys.exit(0 if len(sys.argv) > 1 else 2)
 _REQ = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements-face.txt"))
+MATTES = sys.argv[sys.argv.index("--mattes") + 1] if "--mattes" in sys.argv else ""
 try:
-    import numpy as np, cv2, mediapipe as mp
+    import numpy as np, cv2
     from PIL import Image, ImageDraw, ImageFont
+    if not MATTES: import mediapipe as mp
 except ImportError as e:
     sys.exit(f"echo_trail.py: missing Python package '{e.name}'. Install (~600 MB): python3 -m pip install -r {_REQ}")
-if not hasattr(mp, "solutions"):
+if not MATTES and not hasattr(mp, "solutions"):
     sys.exit(f"echo_trail.py: mediapipe {mp.__version__} has no legacy solutions API; python3 -m pip install -r {_REQ}")
 if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
     sys.exit("echo_trail.py: needs ffmpeg + ffprobe on PATH (macOS: brew install ffmpeg)")
@@ -36,10 +41,13 @@ num, den = map(int, RATE.split("/")); FPS = num / den
 DUR = DUR or float(info["format"]["duration"]) - T0
 OH = int(round(OW * H0 / W0 / 2) * 2)
 N = int(DUR * FPS)
+if MATTES:
+    META = json.load(open(os.path.join(MATTES, "meta.json")))
+    OW, OH, RATE, FPS, N, DUR = META["width"], META["height"], META["rate"], META["fps"], META["frames"], META["frames"] / META["fps"]
 if BEATS: beats = json.load(open(BEATS))
 elif BPM: beats = [OFFSET + i * 60 / BPM for i in range(int(DUR * BPM / 60) + 2)]
 else: beats = []
-seg = mp.solutions.selfie_segmentation.SelfieSegmentation(model_selection=MODEL)
+seg = None if MATTES else mp.solutions.selfie_segmentation.SelfieSegmentation(model_selection=MODEL)
 GF = hasattr(cv2, "ximgproc") and hasattr(cv2.ximgproc, "guidedFilter")
 NEON = np.array([[255, 40, 200], [170, 60, 255], [70, 110, 255], [30, 210, 255], [40, 255, 190], [255, 220, 60]], np.float32)  # RGB, newest first
 font = None
@@ -63,18 +71,31 @@ def beat_phase(t):
     i = past[-1]; return t - beats[i], i % BPB == 0, i
 
 
-dec = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{T0:.3f}", "-i", src, "-t", f"{DUR:.3f}", "-vf", f"scale={OW}:{OH}:flags=area",
-                        "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE, bufsize=10 ** 8)
+def source():
+    """(rgb frame, mask or None) pairs: from the mattes folder, or decoded and segmented on the fly."""
+    if MATTES:
+        for i in range(N):
+            f = cv2.imread(os.path.join(MATTES, "frames", f"{i:05d}.jpg"))[..., ::-1]
+            m = cv2.imread(os.path.join(MATTES, "masks", f"{i:05d}.png"), 0)
+            if m.shape != (OH, OW): m = cv2.resize(m, (OW, OH))
+            yield np.ascontiguousarray(f), m.astype(np.float32) / 255
+        return
+    dec = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{T0:.3f}", "-i", src, "-t", f"{DUR:.3f}", "-vf", f"scale={OW}:{OH}:flags=area",
+                            "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE, bufsize=10 ** 8)
+    while True:
+        buf = dec.stdout.read(OW * OH * 3)
+        if len(buf) < OW * OH * 3: break
+        yield np.frombuffer(buf, np.uint8).reshape(OH, OW, 3), None
+    dec.wait()
+
+
 tmp = out + ".video.mp4"
 enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{OW}x{OH}", "-r", RATE, "-i", "-",
                         "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", "-g", "12", tmp], stdin=subprocess.PIPE)
 ring, prev_m, frozen, n = [], None, [], 0
-while True:
-    buf = dec.stdout.read(OW * OH * 3)
-    if len(buf) < OW * OH * 3: break
-    rgb = np.frombuffer(buf, np.uint8).reshape(OH, OW, 3)
+for rgb, pm in source():
     t = n / FPS
-    m = mask_of(rgb, prev_m); prev_m = m
+    m = pm if pm is not None else mask_of(rgb, prev_m); prev_m = m
     f = rgb.astype(np.float32) / 255
     ring.append((f, m)); ring = ring[-(COPIES * DELAY + 1):]
     dt, down, bi = beat_phase(t)
@@ -109,11 +130,11 @@ while True:
         d.text((x0 + pad, y0 + pad * 0.6), LABEL, font=font, fill=(255, 255, 255))
         img = np.asarray(im)
     enc.stdin.write(img.tobytes()); n += 1
-enc.stdin.close(); enc.wait(); dec.wait()
+enc.stdin.close(); enc.wait()
 if AUDIO:
     subprocess.check_call(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-ss", f"{ASTART:.3f}", "-i", AUDIO, "-map", "0:v:0", "-map", "1:a:0",
                            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-af", f"afade=t=out:st={max(0, n / FPS - 0.6):.2f}:d=0.6",
                            "-shortest", out])
     os.remove(tmp)
 else: os.replace(tmp, out)
-print(f"wrote {out}: {n} frames {OW}x{OH} @ {FPS:.3f} fps, {len(beats)} beats, guided filter: {GF}")
+print(f"wrote {out}: {n} frames {OW}x{OH} @ {FPS:.3f} fps, {len(beats)} beats, mattes: {'folder' if MATTES else 'mediapipe'}")

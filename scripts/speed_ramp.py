@@ -15,6 +15,8 @@ Config (JSON): {"fps": 30, "width": 1920, "audio": "music.wav", "audio_start": 0
   "segments": [{"video": "a.mp4", "out": [0, 5.0], "hit_out": 2.5, "hit_src": 5.7, "fast": 2.0, "slow": 0.25, "width": 0.55,
                 "fast_after": 2.0}, ...],
   "end_hold": 1.25, "end_title": "..."}
+  "readout": false hides the speed readout and "punch": false the zoom punch and flashes: a clean ramped clip to feed into
+  another effect (pop_out.py).
 Usage: python speed_ramp.py config.json out.mp4      (prints each segment's source range; errors if it leaves the clip)
 Needs numpy, opencv, Pillow, ffmpeg (requirements-edit.txt)."""
 import os, sys, json, subprocess, shutil
@@ -133,14 +135,16 @@ for k, seg in enumerate(C["segments"]):
             i = min(max(int(np.floor(x)), 0), len(fr) - 2); a = x - i
             img = fr[i].astype(np.float32) * (1 - a) + fr[i + 1].astype(np.float32) * a
         dh = t - seg["hit_out"]
-        if 0 <= dh < 0.45: img = zoom(img, 1 + 0.07 * np.exp(-dh / 0.12))
-        if 0 <= dh < 0.12: img = img + (255 - img) * 0.55 * (1 - dh / 0.12)
-        dc = t - seg["out"][0]
-        if k and dc < 0.1: img = img + (255 - img) * 0.7 * (1 - dc / 0.1)
+        if C.get("punch", True):
+            if 0 <= dh < 0.45: img = zoom(img, 1 + 0.07 * np.exp(-dh / 0.12))
+            if 0 <= dh < 0.12: img = img + (255 - img) * 0.55 * (1 - dh / 0.12)
+            dc = t - seg["out"][0]
+            if k and dc < 0.1: img = img + (255 - img) * 0.7 * (1 - dc / 0.1)
         txt = []
         if C.get("label"): txt.append(("pill", C["label"], int(OW * 0.025), int(OH * 0.035), int(OH * 0.034), (255, 255, 255)))
-        txt.append(("pill", f"速度 ×{v:.2f}", int(OW * 0.80), int(OH * 0.035), int(OH * 0.034), (255, 217, 61) if v < 0.9 else (255, 255, 255)))
-        img = overlay(img, txt)
+        if C.get("readout", True):
+            txt.append(("pill", f"速度 ×{v:.2f}", int(OW * 0.80), int(OH * 0.035), int(OH * 0.034), (255, 217, 61) if v < 0.9 else (255, 255, 255)))
+        if txt: img = overlay(img, txt)
         last = img
         enc.stdin.write(np.clip(img, 0, 255).astype(np.uint8).tobytes())
     del fr
