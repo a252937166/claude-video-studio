@@ -10,6 +10,7 @@ It comes out of one week of real projects: five pixel-art MVs and PSAs, flat-cut
 |---|---|---|
 | Pixel-art MV / explainer | ✅ publish-ready | 2-min MV in ~1–2 h |
 | Flat cutout / motion graphics | ✅ publish-ready | 1-min in ~1.5–2 h |
+| Editing real footage: cuts from a transcript, time freeze, subtitles, de-watermark, face mosaic, popular effects | ✅ publish-ready | a 2.5-min take in under 2 h |
 | 2D character via AI motion transfer (Kling 「动作控制」 on a Claude-rendered driver) | ✅ keeps the illustration's style; needs a Kling account | driver ~1 h + post ~0.5 h |
 | 2D rig animation of one illustration | ⚠️ idle or talking loops only; dance reads as a puppet | 20 s in ~1–3 h |
 | 3D realistic | ❌ unless you bring a high-quality model | 20 s in 10–30+ h |
@@ -46,6 +47,13 @@ Then ask Claude Code something like:
 - `scripts/pixel_sprite.py` — a stdlib pixel-sprite kit: palette grids → PNG, auto-outline, preview sheet.
 - `scripts/qa_video.sh` — probes the MP4, scans every frame for black frames, and builds a contact sheet from frames extracted one by one.
 - `scripts/add_cover.sh` — prepends a 1 s designed cover (sync-safe), embeds it as cover art, and exports 16:9, 4:3 and 3:4 covers.
+- `scripts/transcribe_zh.py` — local Chinese ASR (FunASR): per-character timestamps, an SRT, pauses and slip candidates; `--nano` for dialects.
+- `scripts/time_freeze.py` — the time-freeze gag from one locked-off take; the frozen region covers every pose, so there are no ghost limbs.
+- `scripts/dewatermark.py` — removes a static burned-in watermark (temporal-min stroke mask, texture transplant or inpaint).
+- `scripts/face_mosaic.py` — pixelates every face with tile detection, pose-based heads and tracking, plus an audit of frames that came up short.
+- `scripts/echo_trail.py` — dance afterimage (「残影」) with beat flashes.
+- `scripts/freeze_intro.py` — 「人物定格出场」: beat freezes, per-person cutouts that work in group shots, name cards, a group freeze.
+- `scripts/speed_ramp.py` — 「曲线变速卡点」: speed curves with the highlight on the beat, flow-interpolated slow motion.
 - `scripts/make_green.py` — frames a cut-out character on flat green to match a driver video's first frame (for Kling / Veo).
 - `scripts/standin_from_driver.py` — difference-keys a driver video against its clean plate into an alpha stand-in, so the camera plan can be rehearsed before paying for generation.
 - `scripts/key_diff.py` — colour-difference keyer for AI green-screen footage, writing VP9-alpha WebM. Unlike chromakey, it keeps dark clothes solid; it also blanks a watermark corner.
@@ -55,6 +63,7 @@ Then ask Claude Code something like:
 - `references/qa-checklist.md` — pre-publish checklist, including China's AI-content labeling rule (2025-09-01).
 - `references/3d-lessons.md` — seven 3D iterations of the same 20 s chorus, why the model is the bottleneck, and the per-frame motion and lip checks.
 - `references/2d-motion-transfer.md` — the 2D pipeline that worked: driver → aligned image → Kling / Veo → keying, timing and lip checks → edit. It also covers the consistency traps.
+- `references/ai-editing.md` — the AI-editing pipeline for real footage, recipes for popular edits, sourcing and rights, and lessons learned.
 - `references/2d-rig-lessons.md` — the mesh-rig route and its per-frame QA, and why dance still reads as a puppet.
 
 ## Requirements

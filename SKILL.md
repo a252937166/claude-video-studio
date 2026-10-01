@@ -1,6 +1,6 @@
 ---
 name: claude-video-studio
-description: Make short videos (Douyin/TikTok/Reels/Shorts) with Claude Code as a code-driven animator. Use it when the user wants a music video, lyric MV, pixel-art or flat-cutout animation, a narrated explainer or PSA, or asks which video style Claude does well. It picks a style by what renders reliably (pixel and flat cutout first; 2D characters by AI motion transfer on a Claude-rendered driver; 3D only with caveats), writes timed lyrics for AI music, builds pixel characters from photos, cuts to the beat with HyperFrames, and QA-checks the MP4 before publishing.
+description: Make short videos (Douyin/TikTok/Reels/Shorts) with Claude Code as a code-driven animator. Use it when the user wants a music video, lyric MV, pixel-art or flat-cutout animation, a narrated explainer or PSA, or asks which video style Claude does well. It also edits real footage (cuts from a local transcript, time-freeze gags, subtitles with keyword emphasis, step cards, de-watermarking, face mosaics, popular Douyin effects like afterimages, freeze intros and speed ramps). It picks a style by what renders reliably (pixel and flat cutout first; 2D characters by AI motion transfer on a Claude-rendered driver; 3D only with caveats), writes timed lyrics for AI music, builds pixel characters from photos, cuts to the beat with HyperFrames, and QA-checks the MP4 before publishing.
 ---
 
 # Claude Video Studio
@@ -22,6 +22,9 @@ Show the user the missing items for the workflow they want, and **ask before ins
 | Voice-over | edge-tts | `pip install edge-tts` (~5 MB; needs network while synthesising) |
 | 2D motion transfer | numpy, scipy, Pillow; ffmpeg with libvpx-vp9 | `pip install -r requirements-2d.txt` (~150 MB) |
 | 2D lip / iris checks | mediapipe **0.10.14** (legacy FaceMesh API; Python 3.9–3.12) | `pip install -r requirements-face.txt` (~600 MB); mediapipe 1.x is untested |
+| Editing real footage | numpy, scipy, Pillow, OpenCV (contrib for the guided filter); noisereduce | `pip install -r requirements-edit.txt` (~250 MB) · `pip install noisereduce` |
+| Face mosaic, person cutouts | mediapipe **0.10.14** | `pip install -r requirements-face.txt` (~600 MB) |
+| Chinese transcription | FunASR + torch (Python 3.10–3.12) | `pip install -r requirements-asr.txt` (~1 GB; models 1–3 GB from ModelScope on first run) |
 | 3D / driver videos | Blender 4.5 LTS | blender.org LTS download (~1 GB) |
 
 **What downloads by itself** (say so before the first run):
@@ -95,7 +98,7 @@ AI music apps (Gemini/Lyria, Suno, …) follow timing much better when you give 
 
 Use this when the user has one illustration and wants it to dance or rap. A mesh rig of one front view reads as a puppet.
 
-1. **Driver video.** Render the choreography with a 3D stand-in (section 8's model and motion): one person, a static camera, 3–30 s.
+1. **Driver video.** Render the choreography with a 3D stand-in (section 9's model and motion): one person, a static camera, 3–30 s.
    - A full-body take for the dance.
    - A waist-up take with lyric gestures and a lip-synced mouth (MuseTalk on the driver).
    - A clean plate: the same camera with the character hidden.
@@ -111,7 +114,21 @@ Use this when the user has one illustration and wants it to dance or rap. A mesh
    - Edit on the beat, and render at the footage fps.
 6. **Keep one generator per character.** Kling cel and Veo 3D-toon side by side read as two different drawings. Compare faces across clips; `scripts/recolor_iris.py` fixes eye-colour drift.
 
-## 6. Voice-over and SFX (explainers / PSAs)
+## 6. Editing real footage (AI editing) — see `references/ai-editing.md`
+
+Use this when the user hands over their own footage ("cut my slip, add subtitles, remove the logo, add effects").
+
+1. **Transcribe locally.** `scripts/transcribe_zh.py` gives per-character timestamps, pauses and slip candidates (`--nano` for dialects). The cuts go into an EDL; snap them to whole frames and put short dissolves on the joins.
+2. **Framing.** Keep one fixed framing unless camera moves are asked for.
+3. **Time freeze.** `scripts/time_freeze.py`: the frozen region is the union of all the subject's poses, so no ghost limbs.
+4. **Watermarks.** `scripts/dewatermark.py`: a temporal-min stroke mask plus a texture transplant.
+5. **Graphics.** Do them in HyperFrames: subtitles under the speaker with keyword emphasis, step cards plus a tracker, impact words, stickers, an end card.
+6. **Audio.** `noisereduce` with a noise print taken from the pauses, then loudnorm at −16 LUFS, plus synthesised SFX at the cue times.
+7. **Privacy.** `scripts/face_mosaic.py` before showing people who did not agree to appear.
+8. **Popular edits.** `scripts/echo_trail.py` (舞蹈残影), `scripts/freeze_intro.py` (人物定格出场, which works in group shots), `scripts/speed_ramp.py` (曲线变速卡点, with flow-interpolated slow motion).
+9. **Rights.** Link someone else's reference video instead of embedding it. Use licensed stock (e.g. Mixkit's free licence) and the user's own music.
+
+## 7. Voice-over and SFX (explainers / PSAs)
 
 - **Script.** Take the user's script **verbatim**; don't paraphrase medical or legal text.
 - **Voices** (edge-tts):
@@ -124,7 +141,7 @@ Use this when the user has one illustration and wants it to dance or rap. A mesh
 - **Timing.** The picture follows the voice: build `timeline.json` from the real line durations, then animate.
 - **SFX.** Synthesize 8-bit SFX with numpy (blips, steps, heartbeat, rewind) and mix them into one voice track. Offer a no-voice version too, with the music louder and loudnorm at −16 LUFS.
 
-## 7. QA — never trust the preview alone
+## 8. QA — never trust the preview alone
 
 Run the checklist in `references/qa-checklist.md`. The essentials:
 
@@ -136,7 +153,7 @@ Run the checklist in `references/qa-checklist.md`. The essentials:
 - Put credits for CC-BY assets (models, scenes, motion data) in the description.
 - **AI footage** (Kling, Veo): run the checks in the checklist's last section: keying, timing against the driver, mouth against the vocals, face consistency across clips, and a render fps equal to the footage fps.
 
-## 8. 3D (only if the user insists) — see `references/3d-lessons.md`
+## 9. 3D (only if the user insists) — see `references/3d-lessons.md`
 
 - Scenes:
   - real scans (Sketchfab CC-BY);
@@ -150,7 +167,7 @@ Run the checklist in `references/qa-checklist.md`. The essentials:
 - Lip-sync on AI-generated, reverb-heavy rap stays weak. JoyVASA, MuseTalk and LatentSync all scored SyncNet ≈ 1.6–1.8 on it (a static mouth scored 0.9). Say so honestly.
 - Budget: disk (models of 4–10 GB each) and hours. **Ask before any multi-GB download.**
 
-## 9. Working style (lessons from real sessions)
+## 10. Working style (lessons from real sessions)
 
 - Show a storyboard or a still first, and render after approval.
 - Give honest limits early. Don't burn hours polishing a dead end: the 3D re-dress was.
